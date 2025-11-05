@@ -245,6 +245,24 @@ plt.title(f'Casos com Ripple menor que {ripple_bom} dB')
 plt.grid(True)
 
 
+# Encontra os 3 melhores casos entre aqueles que atendem ao critério de ripple e imprime no terminal
+if len(bons_indices) > 0:
+    indices_ordenados = bons_indices[np.argsort(ganho_medio_arr[bons_indices])[::-1]]
+    
+    n_melhores = min(3, len(indices_ordenados))
+    melhores_indices = indices_ordenados[:n_melhores]
+    
+    print("\n=== PARÂMETROS DOS MELHORES CASOS ===")
+    for idx, i in enumerate(melhores_indices):
+        print(f"\nCaso #{idx + 1} (índice original: {i})")
+        print(f"Comprimentos de onda dos bombeios (nm): {lamb_arr[i]}")
+        print(f"Potências dos bombeios (W): {pot_arr[i]}")
+        print(f"Ganho médio: {ganho_medio_arr[i]:.2f} dB")
+        print(f"Ripple: {ripple_arr[i]:.2f} dB")
+        print(f"Ganho on-off médio: {ganho_on_off_medio_arr[i]:.2f} dB")
+else:
+    print("\nNenhum caso encontrado que atenda ao critério de ripple <= " + str(ripple_bom) + " dB")
+
 # Exibe os dois gráficos
 plt.show()
 
