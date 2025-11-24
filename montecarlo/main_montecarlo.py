@@ -264,6 +264,6 @@ else:
     print("\nNenhum caso encontrado que atenda ao critério de ripple <= " + str(ripple_bom) + " dB")
 
 # Exibe os dois gráficos
-plt.show()
+plt.savefig("montecarlo/resultados.png")
 
 

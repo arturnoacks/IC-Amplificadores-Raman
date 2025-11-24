@@ -172,11 +172,11 @@ def evaluate_amplifier(lambdap, Plp):
     return ripple, ganho_medio
 
 def main():
-    ga = GeneticAlgorithm(pop_size=100, n_pumps=3, mutation_rate=0.1)
+    ga = GeneticAlgorithm(pop_size=200, n_pumps=3, mutation_rate=0.3)
     
     population = ga.initialize_population()
     
-    best_individual, best_fitness = ga.evolve(population, evaluate_amplifier, n_generations=100)
+    best_individual, best_fitness = ga.evolve(population, evaluate_amplifier, n_generations=1000)
 
     best_lambdas = best_individual[:ga.n_pumps]
     best_powers = best_individual[ga.n_pumps:]
@@ -185,6 +185,11 @@ def main():
     print(f"Comprimentos de onda: {best_lambdas}")
     print(f"Potências: {best_powers}")
     print(f"Ganho médio: {best_fitness:.2f} dB")
+
+    # lambdap = np.array([1399.69658618, 1418.08403607, 1434.88124002])
+    # plp = np.array([1.65552024, 2.10125963, 2.47852006])
+    # ripple, ganho_medio = evaluate_amplifier(lambdap, plp)
+    # print(f"Ganho médio: {ganho_medio:.2f} dB\nRipple: {ripple:.2f} dB")
 
 if __name__ == "__main__":
     main()

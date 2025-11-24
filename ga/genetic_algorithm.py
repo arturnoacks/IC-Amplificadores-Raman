@@ -1,7 +1,7 @@
 import numpy as np
 
 class GeneticAlgorithm:
-    def __init__(self, pop_size=50, n_pumps=3, mutation_rate=0.1):
+    def __init__(self, pop_size=100, n_pumps=3, mutation_rate=0.3):
         self.pop_size = pop_size
         self.n_pumps = n_pumps
         self.mutation_rate = mutation_rate
@@ -16,11 +16,16 @@ class GeneticAlgorithm:
         """Inicializa a população com valores aleatórios dentro dos limites."""
         population = []
         # Cada indivíduo é um array concatenado de lambdas e potências
+
         for _ in range(self.pop_size):
             lambdas = np.sort(np.random.uniform(self.lambda_min, self.lambda_max, self.n_pumps))
             powers = np.random.uniform(self.power_min, self.power_max, self.n_pumps)
             individual = np.concatenate([lambdas, powers])
             population.append(individual)
+        
+        # good_individual = np.array([1386.13516393, 1396.81287436, 1426.60972601, 5.84134537, 5.19774688, 5.44270169])
+        # population[0] = good_individual
+
         return np.array(population)
 
     def evaluate_fitness(self, individual, evaluate_amplifier):
@@ -32,28 +37,21 @@ class GeneticAlgorithm:
         ripple, gain = evaluate_amplifier(lambdas, powers)
         
         if ripple > 3:
-            return -np.inf
+            return gain - 100 * (ripple - 3) # penalidade suave
         
         return gain
 
     def select_parents(self, population, fitness_scores):
-        """Seleciona pais usando torneio."""
-        tournament_size = 3
-        parents = []
+        """Seleciona pais usando uma seleção probabilística."""
+        shifted = fitness_scores - fitness_scores.min() + 1e-6
+        probs = shifted / shifted.sum()
+        idx = np.random.choice(len(population), len(population), p=probs)
+        return population[idx]
         
-        for _ in range(len(population)):
-            # Seleciona indivíduos aleatórios para o torneio
-            tournament_idx = np.random.choice(len(population), tournament_size)
-            tournament_fitness = fitness_scores[tournament_idx]
-            # Seleciona o vencedor (maior fitness)
-            winner_idx = tournament_idx[np.argmax(tournament_fitness)]
-            parents.append(population[winner_idx])
-        
-        return np.array(parents)
 
     def crossover(self, parent1, parent2):
         """Realiza o crossover entre dois pais."""
-        # Crossover de um ponto
+        # Crossover de um ponto (sujeito a mudanças)
         cross_point = np.random.randint(1, len(parent1))
         child1 = np.concatenate([parent1[:cross_point], parent2[cross_point:]])
         child2 = np.concatenate([parent2[:cross_point], parent1[cross_point:]])
@@ -61,15 +59,15 @@ class GeneticAlgorithm:
         return child1, child2
 
     def mutate(self, individual):
-        """Aplica mutação em um indivíduo."""
+        """Aplica mutação gaussiana em um indivíduo."""
         mutated = individual.copy()
         
         for i in range(len(individual)):
             if np.random.random() < self.mutation_rate:
-                if i < self.n_pumps:  # Mutação nos comprimentos de onda
-                    mutated[i] = np.random.uniform(self.lambda_min, self.lambda_max)
-                else:  # Mutação nas potências
-                    mutated[i] = np.random.uniform(self.power_min, self.power_max)
+                if i < self.n_pumps:                    # Mutação nos comprimentos de onda
+                    mutated[i] += np.random.normal(0, 1)
+                else:                                   # Mutação nas potências
+                    mutated[i] += np.random.normal(0, 0.01)
         
         mutated[:self.n_pumps] = np.sort(mutated[:self.n_pumps])
         return mutated
@@ -99,6 +97,8 @@ class GeneticAlgorithm:
                     new_population.extend([self.mutate(child1), self.mutate(child2)])
                 else:
                     new_population.append(self.mutate(parents[i]))
+            
+            new_population[0] = best_individual.copy()
             
             population = np.array(new_population)
             
