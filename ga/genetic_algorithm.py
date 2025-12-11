@@ -1,7 +1,7 @@
 import numpy as np
 
 class GeneticAlgorithm:
-    def __init__(self, pop_size=100, n_pumps=3, mutation_rate=0.3):
+    def __init__(self, pop_size=100, n_pumps=3, mutation_rate=0.3, power_max=1, fiber_len=10):
         self.pop_size = pop_size
         self.n_pumps = n_pumps
         self.mutation_rate = mutation_rate
@@ -9,8 +9,9 @@ class GeneticAlgorithm:
         # Limites para os parâmetros
         self.lambda_min = 1360
         self.lambda_max = 1450
-        self.power_min = 0.1  # W
-        self.power_max = 0.5  # W
+        self.power_min = 0.5  # W
+        self.power_max = power_max  # W
+        self.fiber_len = fiber_len # m
 
     def initialize_population(self):
         """Inicializa a população com valores aleatórios dentro dos limites."""
@@ -23,7 +24,7 @@ class GeneticAlgorithm:
             individual = np.concatenate([lambdas, powers])
             population.append(individual)
         
-        # good_individual = np.array([1386.13516393, 1396.81287436, 1426.60972601, 5.84134537, 5.19774688, 5.44270169])
+        # good_individual = np.array([1390.51311318, 1403.63761682, 1430.0737674, 2.49978332, 2.49942191, 2.49940851])
         # population[0] = good_individual
 
         return np.array(population)
@@ -34,12 +35,20 @@ class GeneticAlgorithm:
         powers = individual[self.n_pumps:]
         
         # Chama a função de avaliação do amplificador
-        ripple, gain = evaluate_amplifier(lambdas, powers)
+        ripple, gain = evaluate_amplifier(lambdas, powers, self.fiber_len)
         
+        ripple_penalty = 0
         if ripple > 3:
-            return gain - 100 * (ripple - 3) # penalidade suave
+            ripple_penalty = 100 * (ripple - 3) # penalidade suave
+
+        powers_penalty = 0
+        for p in powers:
+            if p < self.power_min:
+                powers_penalty += 100 * (self.power_min - p)
+            elif p > self.power_max:
+                powers_penalty += 100 * (p - self.power_max) 
         
-        return gain
+        return gain - ripple_penalty - powers_penalty
 
     def select_parents(self, population, fitness_scores):
         """Seleciona pais usando uma seleção probabilística."""

@@ -3,12 +3,12 @@ import matplotlib.pyplot as plt
 from scipy.integrate import trapezoid
 from genetic_algorithm import GeneticAlgorithm
 
-def evaluate_amplifier(lambdap, Plp):
+def evaluate_amplifier(lambdap, Plp, fiber_len):
 
     lambdas = np.linspace(1520,1600,20)  # Comprimentos de onda dos sinais
     Bws = 0.2  # (nm) largura de banda do analizador de espectro óptico
     Fpl = 2    # fator de polarização do laser
-    distSMF = 10  # comprimento da fibra (m)
+    distSMF = fiber_len  # comprimento da fibra (m)
     
     # Número de sinais
     ns = len(lambdas)
@@ -172,24 +172,63 @@ def evaluate_amplifier(lambdap, Plp):
     return ripple, ganho_medio
 
 def main():
-    ga = GeneticAlgorithm(pop_size=200, n_pumps=3, mutation_rate=0.3)
+    power_max_values = [1.0, 1.5, 2.0, 2.5]
     
-    population = ga.initialize_population()
+    fiber_lengths = [2.5, 5.0, 7.5, 10.0, 12.5, 15.0, 17.5, 20.0, 22.5, 25.0, 27.5, 30.0]
     
-    best_individual, best_fitness = ga.evolve(population, evaluate_amplifier, n_generations=1000)
+    colors = ['r', 'b', 'm', 'g'] 
+    
+    results = {}
 
-    best_lambdas = best_individual[:ga.n_pumps]
-    best_powers = best_individual[ga.n_pumps:]
-    
-    print("\nMelhores parâmetros encontrados:")
-    print(f"Comprimentos de onda: {best_lambdas}")
-    print(f"Potências: {best_powers}")
-    print(f"Ganho médio: {best_fitness:.2f} dB")
+    for p_max in power_max_values:
+        gains_current_curve = []
+        print(f"\n--- Simulando curva para Pmax = {p_max}W ---")
+        
+        for length in fiber_lengths:
+            ga = GeneticAlgorithm(
+                pop_size=200, 
+                n_pumps=3, 
+                mutation_rate=0.3, 
+                power_max=p_max,
+                fiber_len=length 
+            )
+            
+            population = ga.initialize_population()
+        
+            best_individual, best_fitness = ga.evolve(population, evaluate_amplifier, n_generations=2)
+            
+            gains_current_curve.append(best_fitness)
+            print(f"L={length}m -> Ganho: {best_fitness:.2f} dB")
+        
 
-    # lambdap = np.array([1399.69658618, 1418.08403607, 1434.88124002])
-    # plp = np.array([1.65552024, 2.10125963, 2.47852006])
-    # ripple, ganho_medio = evaluate_amplifier(lambdap, plp)
-    # print(f"Ganho médio: {ganho_medio:.2f} dB\nRipple: {ripple:.2f} dB")
+        results[p_max] = gains_current_curve
+
+    plt.figure(figsize=(7, 5))
+    
+    for i, p_max in enumerate(power_max_values):
+        y_values = results[p_max]
+        plt.plot(fiber_lengths, y_values, 
+                 marker='*',
+                 markersize=6,
+                 color=colors[i],
+                 linewidth=1, 
+                 label=f'Pmax = {p_max}W')
+
+    plt.xlabel('Tellurite fiber length [m]', fontsize=12)
+    plt.ylabel('Average Gain [dB]', fontsize=12)
+    
+    plt.legend(loc='upper left', frameon=True, edgecolor='gray', fancybox=False)
+    
+    plt.xlim(0, 31)
+    plt.ylim(0, 15)
+    
+    plt.tick_params(direction='in', top=True, right=True)
+    
+    plt.tight_layout()
+    plt.savefig('average_gain_vs_fiber_length_3_pumps2.png', dpi=300)
+    plt.show()
+
+
 
 if __name__ == "__main__":
     main()

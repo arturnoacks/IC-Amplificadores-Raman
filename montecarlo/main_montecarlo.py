@@ -23,7 +23,7 @@ Plpinicial = Plp.copy()
 Bws = 0.2 # (nm) largura de banda do analizador de espectro óptico
 Fpl = 2 # fator de polarização do laser
 
-distSMF = 10 # comprimento da fibra?
+distSMF = 10 # comprimento da fibra (m)
 # -------------------------------------------------------------- #
 
 ns = len(lambdas) # numero de sinais
