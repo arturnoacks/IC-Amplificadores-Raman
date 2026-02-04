@@ -82,8 +82,9 @@ class GeneticAlgorithm:
         return mutated
 
     def evolve(self, population, evaluate_amplifier, n_generations=100):
-        best_fitness = -np.inf
-        best_individual = None
+        best_fitness = -np.inf      # score
+        best_individual = None      # individuo de fato
+        learning_curve = []
         
         for generation in range(n_generations):
             # Avalia o fitness de toda a população
@@ -110,9 +111,11 @@ class GeneticAlgorithm:
             new_population[0] = best_individual.copy()
             
             population = np.array(new_population)
+
+            learning_curve.append(best_fitness)
             
             # Imprime progresso
             if(generation + 1) % 10 == 0:
                 print(f"Geração {generation + 1}/{n_generations}, Melhor ganho médio: {best_fitness:.2f} dB")
         
-        return best_individual, best_fitness
+        return learning_curve, best_fitness

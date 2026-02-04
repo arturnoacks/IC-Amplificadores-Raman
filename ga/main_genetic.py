@@ -180,8 +180,11 @@ def main():
     
     results = {}
 
+    n_generations = 10
+
     for p_max in power_max_values:
-        gains_current_curve = []
+        current_learning_curves = []        # curva de cada p_max
+        current_gains_curve = []
         print(f"\n--- Simulando curva para Pmax = {p_max}W ---")
         
         for length in fiber_lengths:
@@ -195,19 +198,33 @@ def main():
             
             population = ga.initialize_population()
         
-            best_individual, best_fitness = ga.evolve(population, evaluate_amplifier, n_generations=2)
-            
-            gains_current_curve.append(best_fitness)
+            learning_curve, best_fitness = ga.evolve(population, evaluate_amplifier, n_generations)
+        
+            current_learning_curves.append(learning_curve)
+            current_gains_curve.append(best_fitness)
             print(f"L={length}m -> Ganho: {best_fitness:.2f} dB")
         
+        results[p_max] = current_gains_curve
 
-        results[p_max] = gains_current_curve
+        plt.figure(figsize=(7, 5))
+        for i in range(len(current_learning_curves)):
+            plt.plot(current_learning_curves[i], 
+                     color='r',
+                     label=f'Length = {fiber_lengths[i]}m'
+                    )
+        plt.xlabel('Generations', fontsize=12)
+        plt.ylabel('Best Individual Gain [dB]', fontsize=12)
+
+        plt.tick_params(direction='in', top=True, right=True)
+        plt.tight_layout()
+        plt.savefig(f'learning_curve_{p_max}W_ga.png', dpi=300)
+
 
     plt.figure(figsize=(7, 5))
     
     for i, p_max in enumerate(power_max_values):
         y_values = results[p_max]
-        plt.plot(fiber_lengths, y_values, 
+        plt.plot(fiber_lengths, y_values,
                  marker='*',
                  markersize=6,
                  color=colors[i],
@@ -225,8 +242,7 @@ def main():
     plt.tick_params(direction='in', top=True, right=True)
     
     plt.tight_layout()
-    plt.savefig('average_gain_vs_fiber_length_3_pumps2.png', dpi=300)
-    plt.show()
+    plt.savefig('average_gain_vs_fiber_length_3_pumps_ga.png', dpi=300)
 
 
 
