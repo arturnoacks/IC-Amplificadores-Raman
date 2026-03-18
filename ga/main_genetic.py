@@ -2,6 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from scipy.integrate import trapezoid
 from genetic_algorithm import GeneticAlgorithm
+import csv
 
 def evaluate_amplifier(lambdap, Plp, fiber_len):
 
@@ -190,18 +191,44 @@ def main():
                 n_pumps=3, 
                 mutation_rate=0.3, 
                 power_max=p_max,
-                fiber_len=length 
+                fiber_len=length
             )
             
             population = ga.initialize_population()
         
-            best_individual, best_fitness = ga.evolve(population, evaluate_amplifier, n_generations=2)
+            best_individual, best_fitness, best_history = ga.evolve(population, evaluate_amplifier, n_generations=2000)
             
             gains_current_curve.append(best_fitness)
             print(f"L={length}m -> Ganho: {best_fitness:.2f} dB")
-        
 
+            # Salva gráfico de evolução
+            plt.figure(figsize=(6, 4))
+            plt.plot(range(1, len(best_history) + 1), best_history, markersize=3, linewidth=1)
+            plt.xlabel('Geração', fontsize=10)
+            plt.ylabel('Melhor ganho (dB)', fontsize=10)
+            plt.title(f'Pmax={p_max}W - L={length}m', fontsize=11)
+            plt.grid(True, linestyle='--', alpha=0.4)
+            plt.tight_layout()
+            plot_filename = f"evolution_pmax_{p_max}_len_{length:.1f}.png"
+            plt.savefig(plot_filename, dpi=300)
+            plt.close()
+
+            csv_filename = f"evolution_pmax_{p_max}_len_{length:.1f}.csv"
+            with open(csv_filename, 'w', newline='') as csvfile:
+                writer = csv.writer(csvfile)
+                writer.writerow(['generation', 'best_gain_dB'])
+                for gen, gain in enumerate(best_history, start=1):
+                    writer.writerow([gen, gain])
+        
         results[p_max] = gains_current_curve
+
+        
+        filename = f'gain_data_pmax_{p_max}.csv'
+        with open(filename, 'w', newline='') as csvfile:
+            writer = csv.writer(csvfile)
+            writer.writerow(['Fiber Length (m)', 'Average Gain (dB)'])
+            for length, gain in zip(fiber_lengths, gains_current_curve):
+                writer.writerow([length, gain])
 
     plt.figure(figsize=(7, 5))
     
@@ -225,9 +252,8 @@ def main():
     plt.tick_params(direction='in', top=True, right=True)
     
     plt.tight_layout()
-    plt.savefig('average_gain_vs_fiber_length_3_pumps2.png', dpi=300)
+    plt.savefig('average_gain_vs_fiber_length_3_pumps.png', dpi=300)
     plt.show()
-
 
 
 if __name__ == "__main__":

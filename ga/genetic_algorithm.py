@@ -4,7 +4,13 @@ class GeneticAlgorithm:
     def __init__(self, pop_size=100, n_pumps=3, mutation_rate=0.3, power_max=1, fiber_len=10):
         self.pop_size = pop_size
         self.n_pumps = n_pumps
+        
+        self.initial_mutation_rate = mutation_rate
+        self.base_mutation_rate = mutation_rate
+        
         self.mutation_rate = mutation_rate
+
+        self.min_mutation_rate = 0.05
         
         # Limites para os parâmetros
         self.lambda_min = 1360
@@ -81,10 +87,13 @@ class GeneticAlgorithm:
         mutated[:self.n_pumps] = np.sort(mutated[:self.n_pumps])
         return mutated
 
-    def evolve(self, population, evaluate_amplifier, n_generations=100):
+    def evolve(self, population, evaluate_amplifier, n_generations=3000, patience=200, tolerance=0.01):
         best_fitness = -np.inf
         best_individual = None
-        
+        best_history = []
+        no_improvement_count = 0
+        adaptative_factor = 1.0
+
         for generation in range(n_generations):
             # Avalia o fitness de toda a população
             fitness_scores = np.array([self.evaluate_fitness(ind, evaluate_amplifier) 
@@ -92,9 +101,32 @@ class GeneticAlgorithm:
             
             # Atualiza o melhor indivíduo
             max_fitness_idx = np.argmax(fitness_scores)
-            if fitness_scores[max_fitness_idx] > best_fitness:
-                best_fitness = fitness_scores[max_fitness_idx]
+            current_best = fitness_scores[max_fitness_idx]
+
+
+            
+            # Avalia melhora na população
+            if current_best > best_fitness + tolerance:
+                best_fitness = current_best
                 best_individual = population[max_fitness_idx]
+                no_improvement_count = 0
+            else:
+                no_improvement_count += 1
+            
+            # Verifica critério de parada por convergência e toma providência
+            if no_improvement_count >= patience:
+                print(f"Parada antecipada na geração {generation + 1}: sem melhoria significativa por {patience} gerações.")
+                break
+
+
+            # Convergindo cedo demais -> explora novamente
+            if (generation < 0.1 * n_generations):
+                adaptative_factor = 1.0 + 0.5 * min(2 * no_improvement_count/patience, 1)   # mais agressivo
+
+            # Convergindo fora do intervalo inicial -> fine tuning
+            elif generation >= 0.1 * n_generations:
+                adaptative_factor = 1.0 - 0.5 * no_improvement_count/patience    # menos agressivo
+            
             
             parents = self.select_parents(population, fitness_scores)
             
@@ -110,9 +142,17 @@ class GeneticAlgorithm:
             new_population[0] = best_individual.copy()
             
             population = np.array(new_population)
+
+            # Atualiza taxa de mutação
+            self.base_mutation_rate = self.initial_mutation_rate * (1 - (generation/n_generations))
             
+            self.mutation_rate = max(self.base_mutation_rate * adaptative_factor, self.min_mutation_rate)
+
+            # Armazena o melhor fitness global desta geração
+            best_history.append(best_fitness)
+
             # Imprime progresso
             if(generation + 1) % 10 == 0:
                 print(f"Geração {generation + 1}/{n_generations}, Melhor ganho médio: {best_fitness:.2f} dB")
         
-        return best_individual, best_fitness
+        return best_individual, best_fitness, best_history
