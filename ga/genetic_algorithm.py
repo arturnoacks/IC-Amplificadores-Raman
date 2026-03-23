@@ -87,7 +87,7 @@ class GeneticAlgorithm:
         mutated[:self.n_pumps] = np.sort(mutated[:self.n_pumps])
         return mutated
 
-    def evolve(self, population, evaluate_amplifier, n_generations=3000, patience=200, tolerance=0.01):
+    def evolve(self, population, evaluate_amplifier, n_generations=2000, patience=200, tolerance=0.01):
         best_fitness = -np.inf
         best_individual = None
         best_history = []
@@ -114,7 +114,7 @@ class GeneticAlgorithm:
                 no_improvement_count += 1
             
             # Verifica critério de parada por convergência e toma providência
-            if no_improvement_count >= patience:
+            if no_improvement_count >= patience and generation > 500:
                 print(f"Parada antecipada na geração {generation + 1}: sem melhoria significativa por {patience} gerações.")
                 break
 
