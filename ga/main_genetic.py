@@ -180,10 +180,15 @@ def main():
     if len(sys.argv) == 2:
         if sys.argv[1] == "1":
             evaluate_amp = evaluate_analytic_amp
-        if sys.argv[2] == "2":
+        elif sys.argv[1] == "2":
             evaluate_amp = evaluate_numeric_amp
+        else:
+            print(f"Usage: python3 {sys.argv[0]} N")
+            print("N = 1: analytic solver")
+            print("N = 2: numeric solver")
+            return
     else:
-        print("Usage: python3 {argv[0]} N")
+        print(f"Usage: python3 {sys.argv[0]} N")
         print("N = 1: analytic solver")
         print("N = 2: numeric solver")
         return
@@ -197,11 +202,10 @@ def main():
     
     results = {}
 
-    n_generations = 10
+    n_generations = 3000
 
     for p_max in power_max_values:
-        current_learning_curves = []        # curva de cada p_max
-        current_gains_curve = []
+        gains_current_curve = []
         print(f"\n--- Simulando curva para Pmax = {p_max}W ---")
         
         for length in fiber_lengths:
@@ -215,41 +219,45 @@ def main():
             
             population = ga.initialize_population()
         
-            learning_curve, best_fitness = ga.evolve(population, evaluate_amplifier, n_generations)
-        
-            current_learning_curves.append(learning_curve)
-            current_gains_curve.append(best_fitness)
+            best_individual, best_fitness, best_history = ga.evolve(population, evaluate_amp, n_generations=n_generations)
+            
+            gains_current_curve.append(best_fitness)
             print(f"L={length}m -> Ganho: {best_fitness:.2f} dB")
+
+            # Salva gráfico de evolução
+            plt.figure(figsize=(6, 4))
+            plt.plot(range(1, len(best_history) + 1), best_history, markersize=3, linewidth=1)
+            plt.xlabel('Geração', fontsize=10)
+            plt.ylabel('Melhor ganho (dB)', fontsize=10)
+            plt.title(f'Pmax={p_max}W - L={length}m', fontsize=11)
+            plt.grid(True, linestyle='--', alpha=0.4)
+            plt.tight_layout()
+            plot_filename = f"evolution_pmax_{p_max}_len_{length:.1f}.png"
+            plt.savefig(plot_filename, dpi=300)
+            plt.close()
+
+            csv_filename = f"evolution_pmax_{p_max}_len_{length:.1f}.csv"
+            with open(csv_filename, 'w', newline='') as csvfile:
+                writer = csv.writer(csvfile)
+                writer.writerow(['generation', 'best_gain_dB'])
+                for gen, gain in enumerate(best_history, start=1):
+                    writer.writerow([gen, gain])
         
-        results[p_max] = current_gains_curve
-
-        plt.figure(figsize=(7, 5))
-        for i in range(len(current_learning_curves)):
-            plt.plot(current_learning_curves[i], 
-                     color='r',
-                     label=f'Length = {fiber_lengths[i]}m'
-                    )
-        plt.xlabel('Generations', fontsize=12)
-        plt.ylabel('Best Individual Gain [dB]', fontsize=12)
-
-        plt.tick_params(direction='in', top=True, right=True)
-        plt.tight_layout()
-        plt.savefig(f'learning_curve_{p_max}W_ga.png', dpi=300)
-
+        results[p_max] = gains_current_curve
 
         
         filename = f'gain_data_pmax_{p_max}.csv'
         with open(filename, 'w', newline='') as csvfile:
             writer = csv.writer(csvfile)
             writer.writerow(['Fiber Length (m)', 'Average Gain (dB)'])
-            for length, gain in zip(fiber_lengths, current_gains_curve):
+            for length, gain in zip(fiber_lengths, gains_current_curve):
                 writer.writerow([length, gain])
 
     plt.figure(figsize=(7, 5))
     
     for i, p_max in enumerate(power_max_values):
         y_values = results[p_max]
-        plt.plot(fiber_lengths, y_values,
+        plt.plot(fiber_lengths, y_values, 
                  marker='*',
                  markersize=6,
                  color=colors[i],
@@ -267,7 +275,7 @@ def main():
     plt.tick_params(direction='in', top=True, right=True)
     
     plt.tight_layout()
-    plt.savefig('average_gain_vs_fiber_length_3_pumps_ga.png', dpi=300)
+    plt.savefig('average_gain_vs_fiber_length_3_pumps.png', dpi=300)
 
 
 if __name__ == "__main__":
