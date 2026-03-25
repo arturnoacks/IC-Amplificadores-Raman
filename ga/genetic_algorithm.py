@@ -87,10 +87,10 @@ class GeneticAlgorithm:
         mutated[:self.n_pumps] = np.sort(mutated[:self.n_pumps])
         return mutated
 
-    def evolve(self, population, evaluate_amplifier, n_generations=2000, patience=200, tolerance=0.01):
+    def evolve(self, population, evaluate_amplifier, n_generations=3000, patience=300, tolerance=0.01):
         best_fitness = -np.inf
         best_individual = None
-        best_history = []
+        best_gain_history = []
         no_improvement_count = 0
         adaptative_factor = 1.0
 
@@ -149,10 +149,12 @@ class GeneticAlgorithm:
             self.mutation_rate = max(self.base_mutation_rate * adaptative_factor, self.min_mutation_rate)
 
             # Armazena o melhor fitness global desta geração
-            best_history.append(best_fitness)
+            best_ripple, best_gain = evaluate_amplifier(best_individual[:self.n_pumps], best_individual[self.n_pumps:], self.fiber_len)
+
+            best_gain_history.append(best_gain)
 
             # Imprime progresso
             if(generation + 1) % 10 == 0:
                 print(f"Geração {generation + 1}/{n_generations}, Melhor ganho médio: {best_fitness:.2f} dB")
         
-        return best_individual, best_fitness, best_history
+        return best_individual, best_gain, best_ripple, best_gain_history
