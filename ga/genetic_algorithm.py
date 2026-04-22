@@ -66,7 +66,7 @@ class GeneticAlgorithm:
 
     def crossover(self, parent1, parent2):
         """Realiza o crossover entre dois pais."""
-        # Crossover de um ponto (sujeito a mudanças)
+        # Crossover de um ponto
         cross_point = np.random.randint(1, len(parent1))
         child1 = np.concatenate([parent1[:cross_point], parent2[cross_point:]])
         child2 = np.concatenate([parent2[:cross_point], parent1[cross_point:]])
