@@ -1,7 +1,7 @@
 from scipy.integrate import trapezoid
 import numpy as np
 
-def evaluate_analytic_amp(lambdap, Plp, fiber_len):
+def evaluate_analytic_amp(lambdap, Plp, fiber_len, plot):
 
     lambdas = np.linspace(1520,1600,20)  # Comprimentos de onda dos sinais
     Bws = 0.2  # (nm) largura de banda do analizador de espectro óptico
@@ -166,6 +166,57 @@ def evaluate_analytic_amp(lambdap, Plp, fiber_len):
         ripple = np.nanmax(Ganho_on_off) - np.nanmin(Ganho_on_off)
     
     ganho_medio = np.nanmean(GA_sinaldB)
+
+    if plot == True:
+        plot_gain_spectrum(lambdas, Ganho_on_off)
     
     return ripple, ganho_medio
+
+import matplotlib.pyplot as plt
+
+def plot_gain_spectrum(lambdas, ganho_db, 
+                       title='Espectro de Ganho',
+                       figsize=(10, 7),
+                       show=True):
+    """
+    Gera o gráfico do ganho em função do comprimento de onda.
+
+    Parâmetros
+    ----------
+    lambdas : array-like
+        Comprimentos de onda dos sinais (nm)
+    
+    ganho_db : array-like
+        Ganho em dB correspondente a cada comprimento de onda
+    
+    title : str
+        Título do gráfico
+    
+    figsize : tuple
+        Tamanho da figura
+    
+    show : bool
+        Se True, mostra o gráfico imediatamente
+    """
+
+    plt.figure(figsize=figsize, dpi=300)
+
+    plt.plot(
+        lambdas,
+        ganho_db,
+        marker='s',
+        linewidth=2,
+        color='orange'
+    )
+
+    plt.ylim((5, 20))
+
+    plt.xticks(fontsize=14)
+    plt.yticks(fontsize=14)
+
+    plt.xlabel('Comprimento de onda [nm]', fontsize=20)
+    plt.ylabel('Ganho [dB]', fontsize=20)
+
+    plt.savefig('espectro.pdf', format='pdf')
+
     

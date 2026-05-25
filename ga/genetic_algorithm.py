@@ -41,7 +41,7 @@ class GeneticAlgorithm:
         powers = individual[self.n_pumps:]
         
         # Chama a função de avaliação do amplificador
-        ripple, gain = evaluate_amplifier(lambdas, powers, self.fiber_len)
+        ripple, gain = evaluate_amplifier(lambdas, powers, self.fiber_len, False)
         
         ripple_penalty = 0
         if ripple > 3:
@@ -149,7 +149,7 @@ class GeneticAlgorithm:
             self.mutation_rate = max(self.base_mutation_rate * adaptative_factor, self.min_mutation_rate)
 
             # Armazena o melhor fitness global desta geração
-            best_ripple, best_gain = evaluate_amplifier(best_individual[:self.n_pumps], best_individual[self.n_pumps:], self.fiber_len)
+            best_ripple, best_gain = evaluate_amplifier(best_individual[:self.n_pumps], best_individual[self.n_pumps:], self.fiber_len, plot=False)
 
             best_gain_history.append(best_gain)
 
