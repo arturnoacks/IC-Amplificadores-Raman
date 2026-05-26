@@ -1,7 +1,7 @@
 from scipy.integrate import trapezoid
 import numpy as np
 
-def evaluate_analytic_amp(lambdap, Plp, fiber_len, plot):
+def evaluate_analytic_amp(lambdap, Plp, fiber_len, plot=False):
 
     lambdas = np.linspace(1520,1600,20)  # Comprimentos de onda dos sinais
     Bws = 0.2  # (nm) largura de banda do analizador de espectro óptico
@@ -218,5 +218,3 @@ def plot_gain_spectrum(lambdas, ganho_db,
     plt.ylabel('Ganho [dB]', fontsize=20)
 
     plt.savefig('espectro.pdf', format='pdf')
-
-    
