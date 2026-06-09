@@ -87,33 +87,46 @@ class GeneticAlgorithm:
         mutated[:self.n_pumps] = np.sort(mutated[:self.n_pumps])
         return mutated
 
-    def evolve(self, population, evaluate_amplifier, n_generations=3000, patience=300, tolerance=0.01):
+    def evolve(self, population, evaluate_amplifier_anl, evaluate_amplifier_num, n_generations=3000, patience=300, tolerance=0.01):
         best_fitness = -np.inf
         best_individual = None
         best_gain_history = []
         no_improvement_count = 0
         adaptative_factor = 1.0
+        evaluate_amplifier = evaluate_amplifier_anl
+        numeric_commit = False
 
         for generation in range(n_generations):
             # Avalia o fitness de toda a população
+
             fitness_scores = np.array([self.evaluate_fitness(ind, evaluate_amplifier) 
                                      for ind in population])
             
             # Atualiza o melhor indivíduo
             max_fitness_idx = np.argmax(fitness_scores)
             current_best = fitness_scores[max_fitness_idx]
-
-
             
             # Avalia melhora na população
             if current_best > best_fitness + tolerance:
                 best_fitness = current_best
                 best_individual = population[max_fitness_idx]
-                no_improvement_count = 0
+                if not numeric_commit:
+                    no_improvement_count = 0
+                else: 
+                    no_improvement_count += 1
             else:
                 no_improvement_count += 1
             
             # Verifica critério de parada por convergência e toma providência
+            if no_improvement_count >= 0.95 * patience and not numeric_commit:
+                evaluate_amplifier = evaluate_amplifier_num
+                numeric_commit = True
+
+                best_fitness = self.evaluate_fitness(best_individual, evaluate_amplifier)
+                
+                print(f"Transição para modelo numérico na geração {generation + 1}. Novo best_fitness base: {best_fitness:.2f}")
+
+
             if no_improvement_count >= patience and generation > 500:
                 print(f"Parada antecipada na geração {generation + 1}: sem melhoria significativa por {patience} gerações.")
                 break
@@ -157,4 +170,4 @@ class GeneticAlgorithm:
             if(generation + 1) % 10 == 0:
                 print(f"Geração {generation + 1}/{n_generations}, Melhor ganho médio: {best_fitness:.2f} dB")
         
-        return best_individual, best_gain, best_ripple, best_gain_history
+        return population, fitness_scores, best_individual, best_gain, best_ripple, best_gain_history

@@ -4,9 +4,14 @@ import matplotlib.pyplot as plt
 from scipy.integrate import trapezoid
 from genetic_algorithm import GeneticAlgorithm
 from analytic_solver import evaluate_analytic_amp
+from numeric_solver import evaluate_bvp_amp
+import time
 import csv
 
 def main():
+
+    start_time = time.perf_counter()
+
     n_pumps = 3
 
     power_max_values = [1.0, 1.5, 2.0, 2.5]
@@ -27,7 +32,7 @@ def main():
         
         for length in fiber_lengths:
             ga = GeneticAlgorithm(
-                pop_size=200, 
+                pop_size=50, 
                 n_pumps=n_pumps, 
                 mutation_rate=0.3, 
                 power_max=p_max,
@@ -36,8 +41,7 @@ def main():
             
             population = ga.initialize_population()
         
-            best_individual, best_gain, best_ripple, best_history = ga.evolve(population, evaluate_analytic_amp, n_generations=n_generations)
-            
+            population, fitness_scores, best_individual, best_gain, best_ripple, best_history = ga.evolve(population, evaluate_analytic_amp, evaluate_bvp_amp, n_generations=n_generations)
             
             gains_current_curve.append(best_gain)
             ripple_current_curve.append(best_ripple)
@@ -55,9 +59,11 @@ def main():
             plt.savefig(plot_filename, dpi=300)
             plt.close()
 
+            # csv do melhor individuo + população
             csv_filename = f"evolution_pmax_{p_max}_len_{length:.1f}.csv"
             with open(csv_filename, 'w', newline='') as csvfile:
                 writer = csv.writer(csvfile)
+                writer.writerow(['--- BEST INDIVIDUAL ---'])
                 writer.writerow(['generation', 'best_gain_dB'])
                 for gen, gain in enumerate(best_history, start=1):
                     writer.writerow([gen, gain])
@@ -65,6 +71,26 @@ def main():
                 writer.writerow([best_individual])
                 writer.writerow(['ripple'])
                 writer.writerow([best_ripple])
+            
+            with open(csv_filename, 'a', newline='') as csvfile:
+                writer = csv.writer(csvfile)
+                
+                # Adiciona linhas vazias e um separador visual para organizar o arquivo
+                writer.writerow([])
+                writer.writerow(['--- LAST GENERATION POPULATION ---'])
+                
+                # Cria o cabeçalho dos indivíduos
+                num_params = len(population[0])
+                headers = ['individual_id'] + [f'param_{i}' for i in range(num_params)] + ['fitness_score']
+                writer.writerow(headers)
+                
+                # Grava a população inteira
+                for idx, (individual, score) in enumerate(zip(population, fitness_scores)):
+                    row = [idx] + list(individual) + [score]
+                    writer.writerow(row)
+
+
+        
 
 
         gain_results[p_max] = gains_current_curve
@@ -130,6 +156,12 @@ def main():
     
     plt.tight_layout()
     plt.savefig(f'average_ripple_vs_fiber_length_{n_pumps}_pumps.png', dpi=300)
+
+
+    end_time = time.perf_counter()
+
+    with open("time.txt", "w", encoding="utf-8") as file:
+        file.write(f"Tempo de execução: {end_time - start_time} segundos")
 
 
 if __name__ == "__main__":

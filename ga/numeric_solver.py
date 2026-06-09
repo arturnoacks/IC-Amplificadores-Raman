@@ -1,6 +1,7 @@
 import numpy as np
 from scipy.integrate import solve_bvp
 import matplotlib.pyplot as plt
+from numba import jit
 
 def evaluate_bvp_amp(lambdap, Plp, fiber_len, plot=False):
     """
@@ -267,15 +268,22 @@ def evaluate_bvp_amp(lambdap, Plp, fiber_len, plot=False):
     
     NGmedio = np.mean(NGfim)
     ripple = np.max(NGfim) - np.min(NGfim)
-    
 
-    return NGmedio, ripple
+    return ripple, NGmedio
 
-ind =[1387.6, 1398.7, 1429.3, 2.396, 1.879, 1.808]
 
-lamb = ind[:3]
-plp = ind[3:]
-lenght = 30
-for i in range(20):
-    gain, ripple = evaluate_bvp_amp(lamb, plp, lenght)
-    print(gain, ripple)
+# import time
+
+# start_time = time.perf_counter()
+
+# ind =[1387.6, 1398.7, 1429.3, 2.396, 1.879, 1.808]
+
+# lamb = ind[:3]
+# plp = ind[3:]
+# lenght = 5
+# for i in range(1000):
+#     ripple, gain = evaluate_bvp_amp(lamb, plp, lenght)
+
+# end_time = time.perf_counter()
+
+# print(end_time-start_time)
