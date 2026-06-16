@@ -138,51 +138,53 @@ def evaluate_bvp_amp(lambdap, Plp, fiber_len, plot=False):
     Crpicopump = (1460 * 1e-3) / lambdap
     Crpicosinal = (1585 * 1e-3) / lambdas
 
-    # matrizes de interação
+    def safe_tase(delta_f, hP, Kb, Tf):
+        """Calcula Tase evitando a divisão por zero."""
+        with np.errstate(divide='ignore', invalid='ignore'):
+            denom = np.exp(hP * delta_f / (Kb * Tf)) - 1.0
+            
+            Tase = np.zeros_like(delta_f)
+            
+            mask = denom > 1e-15
+            Tase[mask] = 1.0 + (1.0 / denom[mask])
+            
+        return Tase
+
     # pump -> sinal
     delta_fps = np.abs(fp[:, np.newaxis] - fsin[np.newaxis, :])
     Cr_novo_ps = np.interp(delta_fps, sepfreq, Crnormal)
     Cr_ps = Crpicopump[:, np.newaxis] * Cr_novo_ps
     gs_ps = Cr_ps / FPL
     gp_ps = (wp[:, np.newaxis] / ws[np.newaxis, :]) * gs_ps
-    Tase_ps = 1.0 + (1.0 / (np.exp(hP * delta_fps / (Kb * Tf)) - 1.0))
+    Tase_ps = safe_tase(delta_fps, hP, Kb, Tf)
 
+    
     # pump -> pump
     delta_fpp = np.abs(fp[:, np.newaxis] - fp[np.newaxis, :])
     Cr_novo_pp = np.interp(delta_fpp, sepfreq, Crnormal)
     Cr_pp = Crpicopump[:, np.newaxis] * Cr_novo_pp
     
-    gs_pp = np.zeros((n_p, n_p))
-    gp_pp = np.zeros((n_p, n_p))
-    Tase_pp = np.zeros((n_p, n_p))
+    Tase_pp = safe_tase(delta_fpp, hP, Kb, Tf)
+
+    gp_pp_completa = (wp[:, np.newaxis] / wp[np.newaxis, :]) * (Cr_pp / FPL)
+    gp_pp = np.triu(gp_pp_completa, k=1) # k=1 garante que a diagonal seja zerada
     
-    for i in range(n_p):
-        for k in range(n_p):
-            if i < k:
-                gp_pp[i, k] = (wp[i] / wp[k]) * (Cr_pp[i, k] / FPL)
-                Tase_pp[i, k] = 1.0 + (1.0 / (np.exp(hP * delta_fpp[i, k] / (Kb * Tf)) - 1.0))
-            elif i > k:
-                gs_pp[i, k] = Cr_pp[i, k] / FPL
-                Tase_pp[i, k] = 1.0 + (1.0 / (np.exp(hP * delta_fpp[i, k] / (Kb * Tf)) - 1.0))
+    gs_pp_completa = Cr_pp / FPL
+    gs_pp = np.tril(gs_pp_completa, k=-1)
+
 
     # sinal -> sinal
     delta_fss = np.abs(fsin[:, np.newaxis] - fsin[np.newaxis, :])
     Cr_novo_ss = np.interp(delta_fss, sepfreq, Crnormal)
     Cr_ss = Crpicosinal[:, np.newaxis] * Cr_novo_ss
     
-    gs_ss = np.zeros((n_s, n_s))
-    gp_ss = np.zeros((n_s, n_s))
-    Tase_ss = np.zeros((n_s, n_s))
+    Tase_ss = safe_tase(delta_fss, hP, Kb, Tf)
     
-    for i in range(n_s):
-        for k in range(n_s):
-            if i < k:
-                gp_ss[i, k] = (ws[i] / ws[k]) * (Cr_ss[i, k] / FPL)
-                Tase_ss[i, k] = 1.0 + (1.0 / (np.exp(hP * delta_fss[i, k] / (Kb * Tf)) - 1.0))
-            elif i > k:
-                gs_ss[i, k] = Cr_ss[i, k] / FPL
-                Tase_ss[i, k] = 1.0 + (1.0 / (np.exp(hP * delta_fss[i, k] / (Kb * Tf)) - 1.0))
-
+    gp_ss_completa = (ws[:, np.newaxis] / ws[np.newaxis, :]) * (Cr_ss / FPL)
+    gp_ss = np.triu(gp_ss_completa, k=1)
+    
+    gs_ss_completa = Cr_ss / FPL
+    gs_ss = np.tril(gs_ss_completa, k=-1)
 
     # função edo...
     def ode(x_mesh, y):
@@ -258,7 +260,7 @@ def evaluate_bvp_amp(lambdap, Plp, fiber_len, plot=False):
     sol = solve_bvp(fun=ode, bc=bc, x=x, y=y_init, tol=1e-9, max_nodes=100000)
     
     if not sol.success:
-        return 0, 999.0 
+        return 999.0, 0 
         
 
     Psinal_fim = sol.y[2*n_p : 2*n_p + n_s, -1]

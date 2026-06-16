@@ -93,13 +93,11 @@ class GeneticAlgorithm:
         best_gain_history = []
         no_improvement_count = 0
         adaptative_factor = 1.0
-        evaluate_amplifier = evaluate_amplifier_anl
-        numeric_commit = False
 
         for generation in range(n_generations):
             # Avalia o fitness de toda a população
 
-            fitness_scores = np.array([self.evaluate_fitness(ind, evaluate_amplifier) 
+            fitness_scores = np.array([self.evaluate_fitness(ind, evaluate_amplifier_anl) 
                                      for ind in population])
             
             # Atualiza o melhor indivíduo
@@ -110,23 +108,11 @@ class GeneticAlgorithm:
             if current_best > best_fitness + tolerance:
                 best_fitness = current_best
                 best_individual = population[max_fitness_idx]
-                if not numeric_commit:
-                    no_improvement_count = 0
-                else: 
-                    no_improvement_count += 1
+                no_improvement_count = 0
             else:
                 no_improvement_count += 1
             
             # Verifica critério de parada por convergência e toma providência
-            if no_improvement_count >= 0.95 * patience and not numeric_commit:
-                evaluate_amplifier = evaluate_amplifier_num
-                numeric_commit = True
-
-                best_fitness = self.evaluate_fitness(best_individual, evaluate_amplifier)
-                
-                print(f"Transição para modelo numérico na geração {generation + 1}. Novo best_fitness base: {best_fitness:.2f}")
-
-
             if no_improvement_count >= patience and generation > 500:
                 print(f"Parada antecipada na geração {generation + 1}: sem melhoria significativa por {patience} gerações.")
                 break
@@ -162,12 +148,28 @@ class GeneticAlgorithm:
             self.mutation_rate = max(self.base_mutation_rate * adaptative_factor, self.min_mutation_rate)
 
             # Armazena o melhor fitness global desta geração
-            best_ripple, best_gain = evaluate_amplifier(best_individual[:self.n_pumps], best_individual[self.n_pumps:], self.fiber_len, plot=False)
+            best_ripple, best_gain = evaluate_amplifier_anl(best_individual[:self.n_pumps], best_individual[self.n_pumps:], self.fiber_len, plot=False)
 
             best_gain_history.append(best_gain)
 
             # Imprime progresso
             if(generation + 1) % 10 == 0:
                 print(f"Geração {generation + 1}/{n_generations}, Melhor ganho médio: {best_fitness:.2f} dB")
+
+
+        anl_fitness_scores = fitness_scores 
+        # Reavalia o fitness de toda a população com o modelo numérico
+        num_fitness_scores = np.array([self.evaluate_fitness(ind, evaluate_amplifier_num)
+                                for ind in population])
         
-        return population, fitness_scores, best_individual, best_gain, best_ripple, best_gain_history
+        max_fitness_idx = np.argmax(num_fitness_scores)
+
+        best_individual = population[max_fitness_idx]
+
+        best_ripple, best_gain = evaluate_amplifier_num(best_individual[:self.n_pumps], best_individual[self.n_pumps:], self.fiber_len, plot=False)
+
+        best_gain_history.append(best_gain)
+
+
+        
+        return population, anl_fitness_scores, num_fitness_scores, best_individual, best_gain, best_ripple, best_gain_history

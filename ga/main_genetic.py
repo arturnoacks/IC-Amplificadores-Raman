@@ -7,6 +7,7 @@ from analytic_solver import evaluate_analytic_amp
 from numeric_solver import evaluate_bvp_amp
 import time
 import csv
+import os
 
 def main():
 
@@ -25,6 +26,8 @@ def main():
 
     n_generations = 3000
 
+    os.makedirs("data", exist_ok=True)
+
     for p_max in power_max_values:
         gains_current_curve = []
         ripple_current_curve = []
@@ -41,7 +44,7 @@ def main():
             
             population = ga.initialize_population()
         
-            population, fitness_scores, best_individual, best_gain, best_ripple, best_history = ga.evolve(population, evaluate_analytic_amp, evaluate_bvp_amp, n_generations=n_generations)
+            population, anl_fitness_scores, num_fitness_scores, best_individual, best_gain, best_ripple, best_history = ga.evolve(population, evaluate_analytic_amp, evaluate_bvp_amp, n_generations=n_generations)
             
             gains_current_curve.append(best_gain)
             ripple_current_curve.append(best_ripple)
@@ -55,16 +58,16 @@ def main():
             plt.title(f'Pmax={p_max}W - L={length}m', fontsize=11)
             plt.grid(True, linestyle='--', alpha=0.4)
             plt.tight_layout()
-            plot_filename = f"evolution_pmax_{p_max}_len_{length:.1f}.png"
+            plot_filename = f"data/evolution_pmax_{p_max}_len_{length:.1f}.pdf"
             plt.savefig(plot_filename, dpi=300)
             plt.close()
 
             # csv do melhor individuo + população
-            csv_filename = f"evolution_pmax_{p_max}_len_{length:.1f}.csv"
+            csv_filename = f"data/evolution_pmax_{p_max}_len_{length:.1f}.csv"
             with open(csv_filename, 'w', newline='') as csvfile:
                 writer = csv.writer(csvfile)
                 writer.writerow(['--- BEST INDIVIDUAL ---'])
-                writer.writerow(['generation', 'best_gain_dB'])
+                writer.writerow(['generation', 'anl_fitness_score'])
                 for gen, gain in enumerate(best_history, start=1):
                     writer.writerow([gen, gain])
                 writer.writerow(['best_individual [lambda, power]'])
@@ -74,19 +77,17 @@ def main():
             
             with open(csv_filename, 'a', newline='') as csvfile:
                 writer = csv.writer(csvfile)
-                
-                # Adiciona linhas vazias e um separador visual para organizar o arquivo
                 writer.writerow([])
                 writer.writerow(['--- LAST GENERATION POPULATION ---'])
                 
                 # Cria o cabeçalho dos indivíduos
                 num_params = len(population[0])
-                headers = ['individual_id'] + [f'param_{i}' for i in range(num_params)] + ['fitness_score']
+                headers = ['individual_id'] + [f'param_{i}' for i in range(num_params)] + ['anl_fitness_score'] + ['num_fitness_score']
                 writer.writerow(headers)
                 
                 # Grava a população inteira
-                for idx, (individual, score) in enumerate(zip(population, fitness_scores)):
-                    row = [idx] + list(individual) + [score]
+                for idx, (individual, anl_score, num_score) in enumerate(zip(population, anl_fitness_scores, num_fitness_scores)):
+                    row = [idx] + list(individual) + [anl_score] + [num_score]
                     writer.writerow(row)
 
 
@@ -97,7 +98,7 @@ def main():
         ripple_results[p_max] = ripple_current_curve
 
         
-        filename = f'gain_data_pmax_{p_max}.csv'
+        filename = f'data/gain_data_pmax_{p_max}.csv'
         with open(filename, 'w', newline='') as csvfile:
             writer = csv.writer(csvfile)
             writer.writerow(['Fiber Length (m)', 'Average Gain (dB)', 'Average Ripple (dB)'])
@@ -129,7 +130,7 @@ def main():
     plt.tick_params(direction='in', top=True, right=True)
     
     plt.tight_layout()
-    plt.savefig(f'average_gain_vs_fiber_length_{n_pumps}_pumps.png', dpi=300)
+    plt.savefig(f'data/average_gain_vs_fiber_length_{n_pumps}_pumps.pdf', dpi=300)
 
 
     # grafico de ripple
@@ -155,12 +156,12 @@ def main():
     plt.tick_params(direction='in', top=True, right=True)
     
     plt.tight_layout()
-    plt.savefig(f'average_ripple_vs_fiber_length_{n_pumps}_pumps.png', dpi=300)
+    plt.savefig(f'data/average_ripple_vs_fiber_length_{n_pumps}_pumps.pdf', dpi=300)
 
 
     end_time = time.perf_counter()
 
-    with open("time.txt", "w", encoding="utf-8") as file:
+    with open("data/time.txt", "w", encoding="utf-8") as file:
         file.write(f"Tempo de execução: {end_time - start_time} segundos")
 
 
